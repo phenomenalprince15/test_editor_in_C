@@ -1,6 +1,30 @@
 #include <iostream>
 #include <sys/stat.h>
 #include "input.hpp"
+#include <termios.h>
+
+struct termios orig_termios;
+void enableRawMode();
+void disableRawMode();
+
+void enableRawMode() {
+    // Get the current terminal settings
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disableRawMode); // Ensure that normal mode is restored at exit
+
+    struct termios raw = orig_termios; // Make a copy of original settings
+    raw.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
+    raw.c_cc[VMIN] = 1; // Minimum number of characters to read
+    raw.c_cc[VTIME] = 0; // No timeout
+
+    // Set the new terminal attributes
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+void disableRawMode() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
 
 bool fileExists(const std::string& filename) {
     struct stat buffer; 
@@ -16,6 +40,8 @@ int main(int argc, char** argv) {
     } else {
         perror("getcwd() error");
     }
+
+    enableRawMode();
 
     Input editor; // Create Input object
     

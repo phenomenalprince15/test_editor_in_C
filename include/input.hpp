@@ -9,6 +9,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <cstring>
 
 using namespace std;
 
@@ -21,11 +22,12 @@ class Input {
 
         // Method to capture user Input
         char getInput();
-        
+
         void openFile(const std::string& filename);
         std::string getFileName();
         void writeInFile();
         void createNewFile(const std::string& filename);
+        enum Mode { INSERT, COMMAND };
 
     private:
         void handleCharacterInput(char input);
@@ -37,14 +39,18 @@ class Input {
         void saveFile();
         void quitFile();
         bool checkForUnsavedChanges();
+        void toggleMode();
+        void updateDisplay();
 
         int cursorPosition;
         std::string currentCommand;
+        Mode currentMode;
 
         std::vector<std::string> editorBuffer;
         std::vector<std::string> originalBuffer;
         string currentFileName;
         bool isItaNewFile = false;
+        bool isTextMode;
 };
 
 #endif

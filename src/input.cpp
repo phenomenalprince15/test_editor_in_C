@@ -5,6 +5,7 @@ Input::Input() {
     currentCommand = "";
     originalBuffer.clear();
     editorBuffer.clear();
+    currentMode = COMMAND; // Start in command mode
 }
 
 Input::~Input() {
@@ -16,36 +17,127 @@ Input::~Input() {
 - use system call read
 */
 char Input::getInput() {
-    char buffer[1024];
+    char ch;
     std::cout << "> "; // Prompt for user input
-    std::cin.getline(buffer, sizeof(buffer)); // Read a line from standard input
 
-    for (size_t i = 0; i < strlen(buffer); ++i) {
-        processInput(buffer[i]); // Process each character read
+    while (true) {
+        ch = std::cin.get(); // Read one character
+
+        // Handle mode switching
+        if (currentMode == COMMAND && ch == 'i') {
+            toggleMode();
+            processInput(ch);
+        } else {
+            cout << "Press i to get into insert mode" << endl;
+        }
+
+        if (currentMode == COMMAND && ch == 's') {
+            processInput(ch);
+            quitFile();
+        }
+
+        if (currentMode == COMMAND && ch == 'q') {
+            quitFile();
+        }
+
+        updateDisplay(); // Update display after each character
     }
 
-    return 0;
+    return 0; // Optionally return 0 if needed
+}
+
+void Input::updateDisplay() {
+    std::cout << "\r\033[K"; // Clear the current line
+    std::cout << "Current Mode: " << (currentMode == INSERT ? "Insert" : "Command") << std::endl;
+    std::cout << "Current buffer content:" << std::endl;
+
+    // Display the entire buffer
+    for (const auto& bufferLine : editorBuffer) {
+        std::cout << bufferLine << std::endl;
+    }
+
+    // Show the prompt again based on the mode
+    std::cout << (currentMode == COMMAND ? "> " : "  "); // Indent in Insert Mode
 }
 
 void Input::processInput(char input) {
     switch(input) {
-        case 'w':
+        case 'i':
             writeInFile();
             break;
         case 's':
             saveFile();
             break;
-        // case 'o': {
-        //     std::string filename = getFileName();
-        //     openFile(filename);
-        //     break;
-        // }
         case 'q':
             quitFile();
             break;
-        default:
-            std::cout << "Unknown Command. Available commands: 's' to save, 'o' to open, 'q' to quit." << std::endl;
+        case 'm':
+            toggleMode();
             break;
+        default:
+            std::cout << "Unknown Command. Available commands: 's' to save, 'q' to quit, 'm' to toggle mode." << std::endl;
+            break;
+    }
+}
+
+void Input::writeInFile() {
+    std::cout << "Entering write mode. Type your text (press 'Esc' to switch to command mode):" << std::endl;
+
+    currentMode = INSERT; // Switch to Insert Mode
+
+    // Main input loop for Insert Mode
+    while (currentMode == INSERT) {
+        char ch = std::cin.get(); // Read one character
+
+        // Check for escape key to switch back to Command Mode
+        if (ch == 27) { // ASCII for Escape key
+            toggleMode();  // Switch to command mode
+            break;         // Exit insert mode
+        }
+
+        // Handle line breaks (Enter key)
+        if (ch == '\n') {
+            editorBuffer.push_back(""); // Start a new line in the buffer
+            std::cout << std::endl;     // Move cursor to new line in terminal
+        }
+        // Handle backspace (ASCII value 8 or 127)
+        else if (ch == 8 || ch == 127) { 
+            if (!editorBuffer.empty()) {
+                // Remove the last character from the last line in the buffer
+                if (!editorBuffer.back().empty()) {
+                    editorBuffer.back().pop_back();
+                } else {
+                    // If the last line is empty, remove the line itself
+                    editorBuffer.pop_back();
+                }
+                // Move cursor back and clear current line
+                std::cout << "\r" << std::string(80, ' ') << "\r"; // Clear line
+                std::cout << (editorBuffer.empty() ? "" : editorBuffer.back()); // Display updated line
+            }
+        } else {
+            // Add the character to the last line in the buffer
+            if (!editorBuffer.empty()) {
+                editorBuffer.back() += ch;
+            } else {
+                editorBuffer.push_back(std::string(1, ch)); // Add first character
+            }
+
+            // Display the character in real-time (like in Vim)
+            std::cout << ch;
+        }
+
+        updateDisplay(); // Update the display after each character if needed
+    }
+}
+
+
+void Input::toggleMode() {
+    if (currentMode == INSERT) {
+        currentMode = COMMAND; // Switch to Command Mode
+        std::cout << "\nSwitched to Command Mode." << std::endl;
+    } else {
+        currentMode = INSERT; // Switch to Insert Mode
+        std::cout << "\nSwitched to Insert Mode." << std::endl;
     }
 }
 
@@ -54,31 +146,6 @@ string Input::getFileName() {
     cout << "Enter a file name" << endl;
     getline(cin, filename);
     return filename;
-}
-
-void Input::writeInFile() {
-    std::cout << "Entering write mode. Type your text (press 's' to save):" << std::endl;
-    std::cout << "Entering write mode. Type your text (press 'q' to quit):" << std::endl;
-
-    std::string line;
-    while (true) {
-        std::getline(std::cin, line); // Read a whole line of input
-        
-        // Check for save command
-        if (line == "s") {
-            saveFile(); // Save the file if 's' is entered
-            break; // Exit writing mode after saving
-        }
-
-        if (line == "q") {
-            quitFile(); 
-            break;
-        }
-
-        // Add the line to the editor buffer
-        editorBuffer.push_back(line); 
-        std::cout << "Line added. Type more text or 's' to save or 'q to quit:" << std::endl;
-    }
 }
 
 /*
@@ -183,5 +250,4 @@ bool Input::checkForUnsavedChanges() {
     }
     return false;
 }
-
 
