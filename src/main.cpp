@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
         }
     } else {
         std::cerr << "No filename provided. Exiting." << std::endl;
+        cout << "provide filename like | ./text_editor hello.txt" << endl;
         return 1;
     }
 
