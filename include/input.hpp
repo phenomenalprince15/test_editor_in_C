@@ -10,6 +10,10 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <algorithm>
+
+const char ESCAPE_KEY = 27;
+const char BACKSPACE_KEY = 127;
 
 using namespace std;
 
@@ -41,7 +45,13 @@ class Input {
         bool checkForUnsavedChanges();
         void toggleMode();
         void updateDisplay();
+        void moveCursorUp();
+        void moveCursorDown();
+        void moveCursorRight();
+        void moveCursorLeft();
 
+        int rowPosition;
+        int columnPosition;
         int cursorPosition;
         std::string currentCommand;
         Mode currentMode;

@@ -5,6 +5,8 @@ Input::Input() {
     currentCommand = "";
     originalBuffer.clear();
     editorBuffer.clear();
+    rowPosition = 0;
+    columnPosition = 0;
     currentMode = COMMAND; // Start in command mode
 }
 
@@ -60,6 +62,7 @@ void Input::updateDisplay() {
     std::cout << (currentMode == COMMAND ? "> " : "  "); // Indent in Insert Mode
 }
 
+
 void Input::processInput(char input) {
     switch(input) {
         case 'i':
@@ -97,29 +100,36 @@ void Input::writeInFile() {
 
         // Handle line breaks (Enter key)
         if (ch == '\n') {
-            editorBuffer.push_back(""); // Start a new line in the buffer
-            std::cout << std::endl;     // Move cursor to new line in terminal
+            editorBuffer.insert(editorBuffer.begin() + rowPosition + 1, ""); // Start a new line in the buffer
+            rowPosition++; // Move cursor to the new line
+            columnPosition = 0; // Reset column position to the start
+            std::cout << std::endl; // Move cursor to new line in terminal
         }
         // Handle backspace (ASCII value 8 or 127)
-        else if (ch == 8 || ch == 127) { 
-            if (!editorBuffer.empty()) {
-                // Remove the last character from the last line in the buffer
-                if (!editorBuffer.back().empty()) {
-                    editorBuffer.back().pop_back();
-                } else {
-                    // If the last line is empty, remove the line itself
-                    editorBuffer.pop_back();
+        else if (ch == BACKSPACE_KEY) { 
+            if (rowPosition < editorBuffer.size()) {
+                if (columnPosition > 0) {
+                    editorBuffer[rowPosition].erase(columnPosition - 1, 1); // Remove character to the left
+                    columnPosition--; // Move cursor left
+                } else if (rowPosition > 0) {
+                    // Merge the current line with the previous one
+                    columnPosition = editorBuffer[rowPosition - 1].size(); // Move to end of previous line
+                    editorBuffer[rowPosition - 1] += editorBuffer[rowPosition]; // Merge lines
+                    editorBuffer.erase(editorBuffer.begin() + rowPosition); // Remove the current line
+                    rowPosition--; // Move cursor up
                 }
-                // Move cursor back and clear current line
+                // Clear current line and display updated content
                 std::cout << "\r" << std::string(80, ' ') << "\r"; // Clear line
-                std::cout << (editorBuffer.empty() ? "" : editorBuffer.back()); // Display updated line
+                std::cout << editorBuffer[rowPosition]; // Display updated line
             }
         } else {
-            // Add the character to the last line in the buffer
-            if (!editorBuffer.empty()) {
-                editorBuffer.back() += ch;
+            // Add the character to the current line at the current column position
+            if (rowPosition < editorBuffer.size()) {
+                editorBuffer[rowPosition].insert(editorBuffer[rowPosition].begin() + columnPosition, ch);
+                columnPosition++; // Move cursor right
             } else {
-                editorBuffer.push_back(std::string(1, ch)); // Add first character
+                editorBuffer.push_back(std::string(1, ch)); // Add first character to a new line
+                columnPosition = 1; // Set cursor position to the end of the new line
             }
 
             // Display the character in real-time (like in Vim)
@@ -129,7 +139,6 @@ void Input::writeInFile() {
         updateDisplay(); // Update the display after each character if needed
     }
 }
-
 
 void Input::toggleMode() {
     if (currentMode == INSERT) {
@@ -250,4 +259,41 @@ bool Input::checkForUnsavedChanges() {
     }
     return false;
 }
+
+void Input::moveCursorUp() {
+    if (rowPosition > 0) {
+        rowPosition--; // Move up
+    }
+    // Adjust column position to prevent out of bounds
+    columnPosition = std::min(static_cast<std::string::size_type>(columnPosition), editorBuffer[rowPosition].size());
+}
+
+void Input::moveCursorDown() {
+    if (rowPosition < editorBuffer.size() - 1) {
+        rowPosition++; // Move down
+    }
+    // Adjust column position to prevent out of bounds
+    columnPosition = std::min(static_cast<std::string::size_type>(columnPosition), editorBuffer[rowPosition].size());
+}
+
+void Input::moveCursorLeft() {
+    if (columnPosition > 0) {
+        columnPosition--; // Move left
+    } else if (rowPosition > 0) {
+        // Move to the end of the previous line if at the start of the current line
+        rowPosition--;
+        columnPosition = editorBuffer[rowPosition].size(); // Set to the end of the previous line
+    }
+}
+
+void Input::moveCursorRight() {
+    if (columnPosition < editorBuffer[rowPosition].size()) {
+        columnPosition++; // Move right
+    } else if (rowPosition < editorBuffer.size() - 1) {
+        // Move to the start of the next line if at the end of the current line
+        rowPosition++;
+        columnPosition = 0; // Set to the start of the next line
+    }
+}
+
 
