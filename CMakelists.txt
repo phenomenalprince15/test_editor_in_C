@@ -1,0 +1,25 @@
+# Set the minimum version of CMake required
+cmake_minimum_required(VERSION 3.10)
+
+# Set the project name
+project(TextEditor)
+
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Include directories
+include_directories(include)
+
+# Source files
+set(SOURCES
+    src/main.cpp
+    src/Input.cpp
+    # src/Terminal.cpp
+    # src/Screen.cpp
+    # src/TextBuffer.cpp
+    # src/FileIO.cpp
+)
+
+# Create the executable
+add_executable(text_editor ${SOURCES})
